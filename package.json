@@ -1,0 +1,23 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "main": "nuxt.config.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nuxt dev --host 0.0.0.0 --port 5000"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@nuxtjs/supabase": "^1.5.0",
+    "@nuxtjs/tailwindcss": "^6.13.2",
+    "@pinia/nuxt": "^0.10.1",
+    "drizzle-kit": "^0.30.6",
+    "drizzle-orm": "^0.41.0",
+    "nuxt": "^3.16.2",
+    "pg": "^8.14.1",
+    "pinia": "^3.0.1"
+  }
+}
