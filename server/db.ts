@@ -1,11 +1,20 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
-import pkg from 'pg';
-const { Pool } = pkg;
+import pg from 'pg';
+const { Pool } = pg;
+import { 
+  members, 
+  activities, 
+  participants, 
+  transactions
+} from '../shared/schema.js';
 
-// Tạo kết nối pool đến PostgreSQL
+// Tạo pool kết nối
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL
 });
 
-// Tạo đối tượng drizzle để tương tác với cơ sở dữ liệu
+// Khởi tạo drizzle client
 export const db = drizzle(pool);
+
+// Xuất các schema để truy vấn trong các route
+export { members, activities, participants, transactions };

@@ -1,63 +1,104 @@
-import { pgTable, serial, text, integer, timestamp, doublePrecision } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { pgTable, text, serial, integer, boolean } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
-// Định nghĩa bảng Members (thành viên)
-export const members = pgTable('members', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  qrCode: text('qr_code'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
+export const members = pgTable("members", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  phone: text("phone"), // Không còn bắt buộc
+  qrCode: text("qr_code"),
+  active: boolean("active").default(true),
+  
+  // Thêm thông tin ngân hàng
+  bankCode: text("bank_code"),        // Mã ngân hàng
+  bankBin: text("bank_bin"),          // Mã BIN ngân hàng
+  bankName: text("bank_name"),        // Tên ngân hàng
+  accountName: text("account_name"),  // Tên chủ tài khoản 
+  accountNo: text("account_no"),      // Số tài khoản
 });
 
-// Định nghĩa bảng Activities (các hoạt động/chi tiêu)
-export const activities = pgTable('activities', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  amount: doublePrecision('amount').notNull(),
-  paidById: integer('paid_by_id').references(() => members.id).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull()
+export const activities = pgTable("activities", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  amount: integer("amount").notNull(),
+  payerId: integer("payer_id").notNull(),
 });
 
-// Định nghĩa bảng ActivityParticipants (người tham gia vào các hoạt động)
-export const activityParticipants = pgTable('activity_participants', {
-  id: serial('id').primaryKey(),
-  activityId: integer('activity_id').references(() => activities.id).notNull(),
-  memberId: integer('member_id').references(() => members.id).notNull(),
-  weight: doublePrecision('weight').default(1).notNull() // Trọng số tham gia (mặc định là 1)
+export const participants = pgTable("participants", {
+  id: serial("id").primaryKey(),
+  activityId: integer("activity_id").notNull(),
+  memberId: integer("member_id").notNull(),
 });
 
-// Định nghĩa các mối quan hệ giữa các bảng
-export const membersRelations = relations(members, ({ many }) => ({
-  paidActivities: many(activities),
-  participatedActivities: many(activityParticipants)
-}));
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  fromMemberId: integer("from_member_id").notNull(),
+  toMemberId: integer("to_member_id").notNull(),
+  amount: integer("amount").notNull(),
+  completed: boolean("completed").default(false),
+});
 
-export const activitiesRelations = relations(activities, ({ one, many }) => ({
-  paidBy: one(members, {
-    fields: [activities.paidById],
-    references: [members.id]
-  }),
-  participants: many(activityParticipants)
-}));
+export const insertMemberSchema = createInsertSchema(members).pick({
+  name: true,
+  phone: true,
+  qrCode: true,
+  active: true,
+  bankCode: true,
+  bankBin: true,
+  bankName: true,
+  accountName: true,
+  accountNo: true,
+});
 
-export const activityParticipantsRelations = relations(activityParticipants, ({ one }) => ({
-  activity: one(activities, {
-    fields: [activityParticipants.activityId],
-    references: [activities.id]
-  }),
-  member: one(members, {
-    fields: [activityParticipants.memberId],
-    references: [members.id]
-  })
-}));
+export const insertActivitySchema = createInsertSchema(activities).pick({
+  name: true,
+  amount: true,
+  payerId: true,
+});
 
-// Định nghĩa các kiểu dữ liệu
+export const insertParticipantSchema = createInsertSchema(participants).pick({
+  activityId: true,
+  memberId: true,
+});
+
+export const insertTransactionSchema = createInsertSchema(transactions).pick({
+  fromMemberId: true,
+  toMemberId: true,
+  amount: true,
+  completed: true,
+});
+
+export type InsertMember = z.infer<typeof insertMemberSchema>;
+export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type InsertParticipant = z.infer<typeof insertParticipantSchema>;
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+
 export type Member = typeof members.$inferSelect;
-export type InsertMember = typeof members.$inferInsert;
-
 export type Activity = typeof activities.$inferSelect;
-export type InsertActivity = typeof activities.$inferInsert;
+export type Participant = typeof participants.$inferSelect;
+export type Transaction = typeof transactions.$inferSelect;
 
-export type ActivityParticipant = typeof activityParticipants.$inferSelect;
-export type InsertActivityParticipant = typeof activityParticipants.$inferInsert;
+// Extended types for use in the application
+export type ActivityWithParticipants = Activity & {
+  participants: Member[];
+  payer: Member;
+};
+
+export type MemberBalance = {
+  memberId: number;
+  name: string;
+  phone: string | null;
+  bankCode: string | null; 
+  bankBin: string | null;
+  bankName: string | null;
+  accountNo: string | null;
+  accountName: string | null;
+  paid: number;
+  shouldPay: number;
+  balance: number;
+};
+
+export type TransactionWithMembers = Transaction & {
+  fromMember: Member;
+  toMember: Member;
+};
